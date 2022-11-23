@@ -1,8 +1,7 @@
 package guru.springframework.integration;
 
-import guru.springframework.domain.PageView;
-import guru.springframework.model.events.PageViewEvent;
 import guru.springframework.repositories.PageViewsRepository;
+import guru.springframework.services.PageViewEventMessageHandler;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
@@ -12,15 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.amqp.inbound.AmqpInboundChannelAdapter;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.dsl.channel.MessageChannels;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.MessagingException;
-
-import javax.xml.bind.JAXB;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Created by jt on 2/23/17.
@@ -60,28 +52,6 @@ public class RabbitConfig {
     @Bean
     @ServiceActivator(inputChannel = "amqpInputChannel")
     public MessageHandler pageViewMessageHandler(PageViewsRepository repository) {
-        return new MessageHandler() {
-            @Override
-            public void handleMessage(Message<?> message) throws MessagingException {
-
-                System.out.println("Got Message!");
-
-                String xmlString = (String) message.getPayload();
-
-                System.out.println(xmlString);
-
-                InputStream is = new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8));
-
-                PageViewEvent pageViewEvent =  JAXB.unmarshal(is, PageViewEvent.class);
-
-                PageView pageView = new PageView();
-                pageView.setPageUrl(pageViewEvent.getPageUrl());
-                pageView.setPageViewDate(pageViewEvent.getPageViewDate());
-                pageView.setCorrelationId(pageViewEvent.getCorrelationId());
-
-                repository.save(pageView);
-            }
-
-        };
+        return new PageViewEventMessageHandler(repository);
     }
 }
